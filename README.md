@@ -10,7 +10,25 @@ mvn clean package -DskipTests
 
 By default, it will perform license check and code formatting check via Spotless. Add the `-Dspotless.skip=true` flags to skip these checks.
 
-## Server side configuration
+## Configuration
+
+### Logging
+
+You can change the log level dynamically using Java system properties without rebuilding the application.
+
+To set the root logger level:
+
+```bash
+java -Dlog4j.rootLogger=DEBUG,stdout,file -jar ./target/app-*.jar produce my-topic
+```
+
+To set the log level for specific packages:
+
+```bash
+java -Dlog4j.logger.io.github.bewaremypower=DEBUG -jar ./target/app-*.jar produce my-topic
+```
+
+Available log levels: `TRACE`, `DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL`
 
 ### Authentication
 
