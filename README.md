@@ -10,7 +10,9 @@ mvn clean package -DskipTests
 
 By default, it will perform license check and code formatting check via Spotless. Add the `-Dspotless.skip=true` flags to skip these checks.
 
-## Authentication
+## Server side configuration
+
+### Authentication
 
 Add the `--token` option to specify the JWT token used in Authentication
 
@@ -20,11 +22,23 @@ Example:
 java -jar ./target/app-*.jar --token <your-jwt-token> admin create my-topic
 ```
 
-## Create and delete a set of topics
+### URL
 
-Without this option, only 1 topic `my-topic` wil be created.
+Each subcommand supports the `--url` option to specify the Pulsar service URL.
 
-You can specify the `--range` option to create or delete a set of topics. For example,
+```bash
+java -jar ./target/app-*.jar produce --url <service-url>
+java -jar ./target/app-*.jar consume --url <service-url>
+java -jar ./target/app-*.jar admin --url <admin-url> create my-topic
+```
+
+## Functions
+
+### Create and delete a set of topics
+
+Without this option, only 1 topic `my-topic` will be created.
+
+You can specify the `--ranges` option to create or delete a set of topics. For example,
 
 ```bash
 java -jar ./target/app-*.jar --ranges 11..50 admin create my-topic
@@ -37,3 +51,7 @@ Similarly, you can delete these topics by changing the subcommand from `create` 
 ```bash
 java -jar ./target/app-*.jar --ranges 11..50 admin delete my-topic
 ```
+
+### Produce and Consume
+
+You can use the `produce` and `consume` subcommands to generate load on the Pulsar cluster.

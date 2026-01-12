@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import lombok.Cleanup;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pulsar.common.util.FutureUtil;
 import picocli.CommandLine.Command;
@@ -44,7 +45,7 @@ public class CreateTopicCommand implements Callable<Integer> {
 
   @Override
   public Integer call() throws Exception {
-    final var admin = adminCommand.parent.getAdmin();
+    @Cleanup var admin = adminCommand.createAdmin();
     final List<String> topicsToCreate = adminCommand.parent.expandNames(topic);
 
     final var futures = new ArrayList<CompletableFuture<Boolean>>();

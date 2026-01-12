@@ -18,17 +18,15 @@ package io.github.bewaremypower;
 import java.util.concurrent.Callable;
 import lombok.Cleanup;
 import org.apache.pulsar.client.api.PulsarClientException;
-import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
 @Command(name = "produce", description = "Produce messages to a Pulsar topic")
-public class ProduceCommand implements Callable<Integer> {
-
-  @CommandLine.ParentCommand private App parent;
+public class ProduceCommand extends Client implements Callable<Integer> {
 
   @Override
   public Integer call() throws PulsarClientException {
-    @Cleanup var producer = parent.getClient().newProducer().topic("my-topic").create();
+    @Cleanup var client = createClient();
+    @Cleanup var producer = client.newProducer().topic("my-topic").create();
     producer.send("hello".getBytes());
     return 0;
   }

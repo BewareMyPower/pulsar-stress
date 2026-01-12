@@ -21,21 +21,18 @@ import lombok.Cleanup;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pulsar.client.api.PulsarClientException;
 import org.apache.pulsar.client.api.SubscriptionInitialPosition;
-import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
 @Slf4j
 @Command(name = "consume", description = "Consume messages from a Pulsar topic")
-public class ConsumeCommand implements Callable<Integer> {
-
-  @CommandLine.ParentCommand private App parent;
+public class ConsumeCommand extends Client implements Callable<Integer> {
 
   @Override
   public Integer call() throws PulsarClientException {
+    @Cleanup final var client = createClient();
     @Cleanup
     final var consumer =
-        parent
-            .getClient()
+        client
             .newConsumer()
             .topic("my-topic")
             .subscriptionName("sub")
@@ -47,7 +44,7 @@ public class ConsumeCommand implements Callable<Integer> {
         log.info("Exit the receive loop since it cannot receive a message in 3 seconds.");
         break;
       }
-      log.info("Received message: {}", new String(msg.getData()));
+      log.info("Received message {} from {}", new String(msg.getData()), msg.getMessageId());
       consumer.acknowledge(msg);
     }
     return 0;

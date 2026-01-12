@@ -15,37 +15,25 @@
  */
 package io.github.bewaremypower;
 
-import java.util.concurrent.Callable;
-import org.apache.pulsar.client.admin.PulsarAdmin;
+import java.util.concurrent.TimeUnit;
 import org.apache.pulsar.client.api.AuthenticationFactory;
+import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.PulsarClientException;
 import picocli.CommandLine;
-import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 
-@Command(
-    name = "admin",
-    description = "Admin operations for Pulsar topics",
-    subcommands = {CreateTopicCommand.class, DeleteTopicCommand.class})
-public class AdminCommand implements Callable<Integer> {
+public class Client {
 
-  @CommandLine.ParentCommand App parent;
+  @CommandLine.ParentCommand private App parent;
 
   @Option(
       names = {"--url"},
-      description = "Pulsar admin service URL",
-      defaultValue = "http://localhost:8080")
+      description = "Pulsar service URL",
+      defaultValue = "pulsar://localhost:6650")
   private String url;
 
-  @Override
-  public Integer call() {
-    // When no subcommand is specified, show usage
-    new CommandLine(this).usage(System.out);
-    return 0;
-  }
-
-  protected PulsarAdmin createAdmin() throws PulsarClientException {
-    final var builder = PulsarAdmin.builder().serviceHttpUrl(url);
+  protected PulsarClient createClient() throws PulsarClientException {
+    final var builder = PulsarClient.builder().serviceUrl(url).statsInterval(0, TimeUnit.SECONDS);
     if (parent.getToken() != null) {
       builder.authentication(AuthenticationFactory.token(parent.getToken()));
     }

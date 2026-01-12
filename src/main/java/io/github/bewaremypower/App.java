@@ -19,11 +19,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.regex.Pattern;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.pulsar.client.admin.PulsarAdmin;
-import org.apache.pulsar.client.api.AuthenticationFactory;
-import org.apache.pulsar.client.api.PulsarClient;
-import org.apache.pulsar.client.api.PulsarClientException;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
@@ -38,29 +35,15 @@ import picocli.CommandLine.Option;
 public class App implements Callable<Integer> {
 
   @Option(
-      names = {"--broker-url"},
-      description = "Pulsar broker service URL",
-      defaultValue = "pulsar://localhost:6650")
-  private String brokerUrl;
-
-  @Option(
-      names = {"--admin-url"},
-      description = "Pulsar admin service URL",
-      defaultValue = "http://localhost:8080")
-  private String adminUrl;
-
-  @Option(
       names = {"--token"},
       description = "Authentication token")
+  @Getter
   private String token;
 
   @Option(
       names = {"-r", "--ranges"},
       description = "Range of suffixes (e.g., 3..5 to operate on name-3, name-4, name-5)")
   private String ranges;
-
-  private volatile PulsarClient client;
-  private volatile PulsarAdmin admin;
 
   public static void main(String[] args) {
     int exitCode = new CommandLine(new App()).execute(args);
@@ -72,34 +55,6 @@ public class App implements Callable<Integer> {
     // When no subcommand is specified, show usage
     new CommandLine(this).usage(System.out);
     return 0;
-  }
-
-  public PulsarClient getClient() throws PulsarClientException {
-    if (client != null) {
-      return client;
-    }
-    synchronized (this) {
-      final var builder = PulsarClient.builder().serviceUrl(brokerUrl);
-      if (token != null) {
-        builder.authentication(AuthenticationFactory.token(token));
-      }
-      client = builder.build();
-      return client;
-    }
-  }
-
-  public PulsarAdmin getAdmin() throws PulsarClientException {
-    if (admin != null) {
-      return admin;
-    }
-    synchronized (this) {
-      final var builder = PulsarAdmin.builder().serviceHttpUrl(adminUrl);
-      if (token != null) {
-        builder.authentication(AuthenticationFactory.token(token));
-      }
-      admin = builder.build();
-      return admin;
-    }
   }
 
   public List<String> expandNames(String baseName) {
