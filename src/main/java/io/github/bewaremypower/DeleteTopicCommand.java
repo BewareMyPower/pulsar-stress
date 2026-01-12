@@ -15,9 +15,13 @@
  */
 package io.github.bewaremypower;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.pulsar.client.api.PulsarClientException;
+import org.apache.pulsar.common.util.FutureUtil;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
 import picocli.CommandLine.ParentCommand;
@@ -33,14 +37,24 @@ public class DeleteTopicCommand implements Callable<Integer> {
 
   @Override
   public Integer call() throws Exception {
-    try {
-      final var admin = adminCommand.parent.getAdmin();
-      admin.topics().deletePartitionedTopic(topic);
-      log.info("Successfully deleted partitioned topic '{}'", topic);
-      return 0;
-    } catch (PulsarClientException e) {
-      log.error("Failed to delete partitioned topic '{}': {}", topic, e.getMessage());
-      return 1;
+    final var admin = adminCommand.parent.getAdmin();
+    final List<String> topicsToDelete = adminCommand.parent.expandNames(topic);
+
+    final var futures = new ArrayList<CompletableFuture<Boolean>>();
+    for (final var topic : topicsToDelete) {
+      futures.add(
+          admin
+              .topics()
+              .deletePartitionedTopicAsync(topic, true)
+              .thenApply(__ -> true)
+              .exceptionally(
+                  e -> {
+                    log.warn("Failed to delete partitioned topic '{}': {}", topic, e.getMessage());
+                    return false;
+                  }));
     }
+
+    FutureUtil.waitForAll(futures).get(30, TimeUnit.SECONDS);
+    return 0;
   }
 }

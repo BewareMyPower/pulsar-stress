@@ -15,7 +15,10 @@
  */
 package io.github.bewaremypower;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.pulsar.client.admin.PulsarAdmin;
 import org.apache.pulsar.client.api.AuthenticationFactory;
@@ -50,6 +53,11 @@ public class App implements Callable<Integer> {
       names = {"--token"},
       description = "Authentication token")
   private String token;
+
+  @Option(
+      names = {"-r", "--ranges"},
+      description = "Range of suffixes (e.g., 3..5 to operate on name-3, name-4, name-5)")
+  private String ranges;
 
   private volatile PulsarClient client;
   private volatile PulsarAdmin admin;
@@ -92,5 +100,34 @@ public class App implements Callable<Integer> {
       admin = builder.build();
       return admin;
     }
+  }
+
+  public List<String> expandNames(String baseName) {
+    if (ranges == null || ranges.isEmpty()) {
+      return List.of(baseName);
+    }
+
+    final var rangePattern = Pattern.compile("(\\d+)\\.\\.(\\d+)");
+    final var matcher = rangePattern.matcher(ranges);
+
+    if (!matcher.matches()) {
+      log.error("Invalid range format: '{}'. Expected format: start..end (e.g., 3..5)", ranges);
+      throw new IllegalArgumentException("Invalid range format: " + ranges);
+    }
+
+    final int start = Integer.parseInt(matcher.group(1));
+    final int end = Integer.parseInt(matcher.group(2));
+
+    if (start > end) {
+      log.error("Invalid range: start ({}) must be less than or equal to end ({})", start, end);
+      throw new IllegalArgumentException("Invalid range: start must be <= end");
+    }
+
+    final List<String> names = new ArrayList<>();
+    for (int i = start; i <= end; i++) {
+      names.add(baseName + "-" + i);
+    }
+
+    return names;
   }
 }
