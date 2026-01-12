@@ -22,6 +22,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import lombok.Cleanup;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.pulsar.client.admin.PulsarAdminException;
 import org.apache.pulsar.common.util.FutureUtil;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
@@ -48,10 +49,27 @@ public class DeleteTopicCommand implements Callable<Integer> {
               .topics()
               .deletePartitionedTopicAsync(topic, true)
               .thenApply(__ -> true)
-              .exceptionally(
+              .exceptionallyCompose(
                   e -> {
-                    log.warn("Failed to delete partitioned topic '{}': {}", topic, e.getMessage());
-                    return false;
+                    if (e.getCause() instanceof PulsarAdminException.ConflictException
+                        && e.getMessage().contains("is a non-partitioned topic")) {
+                      return admin
+                          .topics()
+                          .deleteAsync(topic)
+                          .thenApply(__ -> true)
+                          .exceptionally(
+                              ex -> {
+                                log.warn(
+                                    "Failed to delete non-partitioned topic '{}': {}",
+                                    topic,
+                                    ex.getMessage());
+                                return false;
+                              });
+                    } else {
+                      log.warn(
+                          "Failed to delete partitioned topic '{}': {}", topic, e.getMessage());
+                      return CompletableFuture.completedFuture(false);
+                    }
                   }));
     }
 
