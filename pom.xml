@@ -15,13 +15,19 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>17</maven.compiler.source>
     <maven.compiler.target>17</maven.compiler.target>
+    <pulsar.version>4.1.2</pulsar.version>
   </properties>
 
   <dependencies>
     <dependency>
       <groupId>org.apache.pulsar</groupId>
       <artifactId>pulsar-client</artifactId>
-      <version>4.1.2</version>
+      <version>${pulsar.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.pulsar</groupId>
+      <artifactId>pulsar-client-admin</artifactId>
+      <version>${pulsar.version}</version>
     </dependency>
     <dependency>
       <groupId>info.picocli</groupId>
@@ -103,8 +109,9 @@
         </configuration>
         <executions>
           <execution>
+            <id>spotless-apply</id>
             <goals>
-              <goal>check</goal>
+              <goal>apply</goal>
             </goals>
             <phase>process-sources</phase>
           </execution>

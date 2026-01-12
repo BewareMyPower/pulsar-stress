@@ -17,6 +17,7 @@ package io.github.bewaremypower;
 
 import java.util.concurrent.Callable;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.pulsar.client.admin.PulsarAdmin;
 import org.apache.pulsar.client.api.AuthenticationFactory;
 import org.apache.pulsar.client.api.PulsarClient;
 import org.apache.pulsar.client.api.PulsarClientException;
@@ -30,21 +31,28 @@ import picocli.CommandLine.Option;
     mixinStandardHelpOptions = true,
     version = "1.0-SNAPSHOT",
     description = "Pulsar stress testing tool",
-    subcommands = {ProduceCommand.class, ConsumeCommand.class})
+    subcommands = {ProduceCommand.class, ConsumeCommand.class, AdminCommand.class})
 public class App implements Callable<Integer> {
 
   @Option(
       names = {"--broker-url"},
       description = "Pulsar broker service URL",
       defaultValue = "pulsar://localhost:6650")
-  String brokerUrl;
+  private String brokerUrl;
+
+  @Option(
+      names = {"--admin-url"},
+      description = "Pulsar admin service URL",
+      defaultValue = "http://localhost:8080")
+  private String adminUrl;
 
   @Option(
       names = {"--token"},
       description = "Authentication token")
-  String token;
+  private String token;
 
   private volatile PulsarClient client;
+  private volatile PulsarAdmin admin;
 
   public static void main(String[] args) {
     int exitCode = new CommandLine(new App()).execute(args);
@@ -69,6 +77,20 @@ public class App implements Callable<Integer> {
       }
       client = builder.build();
       return client;
+    }
+  }
+
+  public PulsarAdmin getAdmin() throws PulsarClientException {
+    if (admin != null) {
+      return admin;
+    }
+    synchronized (this) {
+      final var builder = PulsarAdmin.builder().serviceHttpUrl(adminUrl);
+      if (token != null) {
+        builder.authentication(AuthenticationFactory.token(token));
+      }
+      admin = builder.build();
+      return admin;
     }
   }
 }
