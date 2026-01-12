@@ -24,7 +24,7 @@ import picocli.CommandLine.Option;
 
 public class Client {
 
-  @CommandLine.ParentCommand private App parent;
+  @CommandLine.ParentCommand protected App parent;
 
   @Option(
       names = {"--url"},

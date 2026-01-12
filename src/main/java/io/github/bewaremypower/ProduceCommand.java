@@ -15,19 +15,77 @@
  */
 package io.github.bewaremypower;
 
+import java.util.ArrayList;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
 import lombok.Cleanup;
-import org.apache.pulsar.client.api.PulsarClientException;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.pulsar.client.api.Producer;
+import org.apache.pulsar.client.api.Schema;
+import org.apache.pulsar.common.util.RateLimiter;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
 
 @Command(name = "produce", description = "Produce messages to a Pulsar topic")
+@Slf4j
 public class ProduceCommand extends Client implements Callable<Integer> {
 
+  @Parameters(index = "0", description = "Topic name")
+  private String topic;
+
+  @Option(
+      names = {"--rate"},
+      description = "Message rate (messages per second for each topic)",
+      defaultValue = "10")
+  private int rate;
+
+  @Option(
+      names = {"-n"},
+      description = "Number of messages to produce for each topic",
+      defaultValue = "100")
+  private int numMessages;
+
   @Override
-  public Integer call() throws PulsarClientException {
+  public Integer call() throws Exception {
     @Cleanup var client = createClient();
-    @Cleanup var producer = client.newProducer().topic("my-topic").create();
-    producer.send("hello".getBytes());
+    @Cleanup
+    final var rateLimiter =
+        RateLimiter.builder().rateTime(1).timeUnit(TimeUnit.SECONDS).permits(rate).build();
+
+    final var producers = new ArrayList<Producer<String>>();
+    for (final var topic : parent.expandNames(this.topic)) {
+      producers.add(client.newProducer(Schema.STRING).topic(topic).blockIfQueueFull(true).create());
+    }
+
+    for (int i = 0; i < numMessages; i++) {
+      rateLimiter.acquire();
+      for (final var producer : producers) {
+        final var value = "msg-" + i;
+        final var future =
+            producer
+                .sendAsync(value)
+                .whenComplete(
+                    (msgId, ex) -> {
+                      if (ex != null) {
+                        log.warn(
+                            "Failed to send {} to {}: {}",
+                            value,
+                            producer.getTopic(),
+                            ex.getMessage());
+                      }
+                    });
+        if (i == numMessages - 1) {
+          try {
+            future.get();
+          } catch (InterruptedException | ExecutionException ignored) {
+
+          }
+        }
+      }
+    }
+
     return 0;
   }
 }

@@ -55,3 +55,25 @@ java -jar ./target/app-*.jar --ranges 11..50 admin delete my-topic
 ### Produce and Consume
 
 You can use the `produce` and `consume` subcommands to generate load on the Pulsar cluster.
+
+The `produce` subcommand sends messages to the target topic:
+
+```bash
+java -jar ./target/app-*.jar produce my-topic
+```
+
+or the topics specified by the `--ranges` option:
+
+```bash
+java -jar ./target/app-*.jar --ranges 11..50 produce my-topic
+```
+
+By default, the rate is 10 messages per second and 100 messages in total for each topic. The behavior can be customized via `--rate` and `-n` options.
+
+The `consume` subcommand receives messages from the target topic:
+
+```bash
+java -jar ./target/app-*.jar consume my-topic
+```
+
+By default, the subscription name is `sub`, which can be customized via the `--sub` option.

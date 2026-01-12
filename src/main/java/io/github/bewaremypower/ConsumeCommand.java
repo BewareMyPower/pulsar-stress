@@ -22,10 +22,21 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.pulsar.client.api.PulsarClientException;
 import org.apache.pulsar.client.api.SubscriptionInitialPosition;
 import picocli.CommandLine.Command;
+import picocli.CommandLine.Option;
+import picocli.CommandLine.Parameters;
 
 @Slf4j
 @Command(name = "consume", description = "Consume messages from a Pulsar topic")
 public class ConsumeCommand extends Client implements Callable<Integer> {
+
+  @Parameters(index = "0", description = "Topic name")
+  private String topic;
+
+  @Option(
+      names = {"--sub"},
+      description = "Subscription name",
+      defaultValue = "sub")
+  private String subscription;
 
   @Override
   public Integer call() throws PulsarClientException {
@@ -34,7 +45,7 @@ public class ConsumeCommand extends Client implements Callable<Integer> {
     final var consumer =
         client
             .newConsumer()
-            .topic("my-topic")
+            .topic(topic)
             .subscriptionName("sub")
             .subscriptionInitialPosition(SubscriptionInitialPosition.Earliest)
             .subscribe();
