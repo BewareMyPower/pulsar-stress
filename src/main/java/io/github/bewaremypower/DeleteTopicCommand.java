@@ -22,7 +22,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import lombok.Cleanup;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.pulsar.client.admin.PulsarAdmin;
 import org.apache.pulsar.client.admin.PulsarAdminException;
+import org.apache.pulsar.common.naming.TopicName;
 import org.apache.pulsar.common.util.FutureUtil;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
@@ -40,14 +42,25 @@ public class DeleteTopicCommand implements Callable<Integer> {
   @Override
   public Integer call() throws Exception {
     @Cleanup final var admin = adminCommand.createAdmin();
-    final List<String> topicsToDelete = adminCommand.parent.expandNames(topic);
+    for (final var entry : adminCommand.parent.getNamespaceToTopicsMap(topic).entrySet()) {
+      final var namespace = entry.getKey();
+      final var topics = entry.getValue();
+      log.info(
+          "Deleting {} partitioned topic(s) under namespace {}",
+          topics.size(),
+          namespace.toString());
+      deleteTopics(admin, topics);
+    }
+    return 0;
+  }
 
+  private void deleteTopics(PulsarAdmin admin, List<TopicName> topicsToDelete) throws Exception {
     final var futures = new ArrayList<CompletableFuture<Boolean>>();
     for (final var topic : topicsToDelete) {
       futures.add(
           admin
               .topics()
-              .deletePartitionedTopicAsync(topic, true)
+              .deletePartitionedTopicAsync(topic.toString(), true)
               .thenApply(__ -> true)
               .exceptionallyCompose(
                   e -> {
@@ -55,7 +68,7 @@ public class DeleteTopicCommand implements Callable<Integer> {
                         && e.getMessage().contains("is a non-partitioned topic")) {
                       return admin
                           .topics()
-                          .deleteAsync(topic)
+                          .deleteAsync(topic.toString())
                           .thenApply(__ -> true)
                           .exceptionally(
                               ex -> {
@@ -74,6 +87,5 @@ public class DeleteTopicCommand implements Callable<Integer> {
     }
 
     FutureUtil.waitForAll(futures).get(30, TimeUnit.SECONDS);
-    return 0;
   }
 }

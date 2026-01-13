@@ -55,7 +55,13 @@ public class ProduceCommand extends Client implements Callable<Integer> {
         RateLimiter.builder().rateTime(1).timeUnit(TimeUnit.SECONDS).permits(rate).build();
 
     final var producers = new ArrayList<Producer<String>>();
-    for (final var topic : parent.expandNames(this.topic)) {
+    final var topics =
+        parent.getNamespaceToTopicsMap(topic).values().stream()
+            .flatMap(list -> list.stream())
+            .map(tn -> tn.toString())
+            .toList();
+
+    for (final var topic : topics) {
       producers.add(client.newProducer(Schema.STRING).topic(topic).blockIfQueueFull(true).create());
     }
 

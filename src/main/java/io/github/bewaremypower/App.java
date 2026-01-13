@@ -16,11 +16,17 @@
 package io.github.bewaremypower;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.pulsar.common.naming.NamespaceName;
+import org.apache.pulsar.common.naming.TopicDomain;
+import org.apache.pulsar.common.naming.TopicName;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
@@ -45,6 +51,11 @@ public class App implements Callable<Integer> {
       description = "Range of suffixes (e.g., 3..5 to operate on name-3, name-4, name-5)")
   private String ranges;
 
+  @Option(
+      names = {"--namespaces"},
+      description = "Dot separated namespaces of the topics (e.g. public/ns1,public/ns2)")
+  private String namespaces;
+
   public static void main(String[] args) {
     int exitCode = new CommandLine(new App()).execute(args);
     System.exit(exitCode);
@@ -57,7 +68,22 @@ public class App implements Callable<Integer> {
     return 0;
   }
 
-  public List<String> expandNames(String baseName) {
+  public Map<NamespaceName, List<TopicName>> getNamespaceToTopicsMap(String baseTopicName) {
+    final var localTopicNames = expandNames(baseTopicName);
+    return Arrays.stream(namespaces.split(","))
+        .map(NamespaceName::get)
+        .collect(
+            Collectors.toMap(
+                nsName -> nsName,
+                nsName ->
+                    localTopicNames.stream()
+                        .map(
+                            topic ->
+                                TopicName.get(TopicDomain.persistent.toString(), nsName, topic))
+                        .toList()));
+  }
+
+  private List<String> expandNames(String baseName) {
     if (ranges == null || ranges.isEmpty()) {
       return List.of(baseName);
     }

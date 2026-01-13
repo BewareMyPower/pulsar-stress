@@ -16,12 +16,15 @@
 package io.github.bewaremypower;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import lombok.Cleanup;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.pulsar.client.admin.PulsarAdmin;
+import org.apache.pulsar.common.naming.TopicName;
 import org.apache.pulsar.common.util.FutureUtil;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
@@ -46,14 +49,35 @@ public class CreateTopicCommand implements Callable<Integer> {
   @Override
   public Integer call() throws Exception {
     @Cleanup var admin = adminCommand.createAdmin();
-    final List<String> topicsToCreate = adminCommand.parent.expandNames(topic);
+    final var tenantToNamespaces = new HashMap<String, List<String>>();
+    for (final var entry : adminCommand.parent.getNamespaceToTopicsMap(topic).entrySet()) {
+      final var namespace = entry.getKey();
+      if (!tenantToNamespaces.containsKey(namespace.getTenant())) {
+        tenantToNamespaces.put(
+            namespace.getTenant(), admin.namespaces().getNamespaces(namespace.getTenant()));
+      }
+      if (!tenantToNamespaces.get(namespace.getTenant()).contains(namespace.toString())) {
+        log.info("Creating namespace {}", namespace.toString());
+        admin.namespaces().createNamespace(namespace.toString());
+      }
 
+      final var topics = entry.getValue();
+      log.info(
+          "Creating {} partitioned topic(s) under namespace {}",
+          topics.size(),
+          namespace.toString());
+      createTopics(admin, topics);
+    }
+    return 0;
+  }
+
+  private void createTopics(PulsarAdmin admin, List<TopicName> topicsToCreate) throws Exception {
     final var futures = new ArrayList<CompletableFuture<Boolean>>();
     for (final var topic : topicsToCreate) {
       futures.add(
           admin
               .topics()
-              .createPartitionedTopicAsync(topic, partitions)
+              .createPartitionedTopicAsync(topic.toString(), partitions)
               .thenApply(__ -> true)
               .exceptionally(
                   e -> {
@@ -63,6 +87,5 @@ public class CreateTopicCommand implements Callable<Integer> {
     }
 
     FutureUtil.waitForAll(futures).get(30, TimeUnit.SECONDS);
-    return 0;
   }
 }
