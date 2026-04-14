@@ -53,7 +53,8 @@ public class App implements Callable<Integer> {
 
   @Option(
       names = {"--namespaces"},
-      description = "Dot separated namespaces of the topics (e.g. public/ns1,public/ns2)")
+      description = "Dot separated namespaces of the topics (e.g. public/ns1,public/ns2)",
+      defaultValue = "public/default")
   private String namespaces;
 
   public static void main(String[] args) {
