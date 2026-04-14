@@ -26,7 +26,12 @@ import picocli.CommandLine.Option;
 @Command(
     name = "admin",
     description = "Admin operations for Pulsar topics",
-    subcommands = {CreateTopicCommand.class, DeleteTopicCommand.class, LookupTopicCommand.class})
+    subcommands = {
+      CreateTopicCommand.class,
+      DeleteTopicCommand.class,
+      LookupTopicCommand.class,
+      UnloadNamespaceCommand.class
+    })
 public class AdminCommand implements Callable<Integer> {
 
   @CommandLine.ParentCommand App parent;

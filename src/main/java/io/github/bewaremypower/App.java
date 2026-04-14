@@ -71,8 +71,7 @@ public class App implements Callable<Integer> {
 
   public Map<NamespaceName, List<TopicName>> getNamespaceToTopicsMap(String baseTopicName) {
     final var localTopicNames = expandNames(baseTopicName);
-    return Arrays.stream(namespaces.split(","))
-        .map(NamespaceName::get)
+    return getNamespaces().stream()
         .collect(
             Collectors.toMap(
                 nsName -> nsName,
@@ -82,6 +81,10 @@ public class App implements Callable<Integer> {
                             topic ->
                                 TopicName.get(TopicDomain.persistent.toString(), nsName, topic))
                         .toList()));
+  }
+
+  public List<NamespaceName> getNamespaces() {
+    return Arrays.stream(namespaces.split(",")).map(NamespaceName::get).toList();
   }
 
   private List<String> expandNames(String baseName) {
