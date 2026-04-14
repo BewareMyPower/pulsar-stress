@@ -15,13 +15,9 @@
  */
 package io.github.bewaremypower;
 
-import java.util.ArrayList;
 import java.util.concurrent.Callable;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import lombok.Cleanup;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.pulsar.common.util.FutureUtil;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 import picocli.CommandLine.ParentCommand;
@@ -49,31 +45,19 @@ public class UnloadNamespaceCommand implements Callable<Integer> {
   @Override
   public Integer call() throws Exception {
     @Cleanup final var admin = adminCommand.createAdmin();
-    final var futures = new ArrayList<CompletableFuture<Boolean>>();
     for (final var namespace : adminCommand.parent.getNamespaces()) {
-      futures.add(
-          admin
-              .namespaces()
-              .unloadNamespaceBundleAsync(namespace.toString(), bundle, broker)
-              .thenApply(
-                  __ -> {
-                    log.info(
-                        "Unloaded namespace {} bundle {} to broker {}", namespace, bundle, broker);
-                    return true;
-                  })
-              .exceptionally(
-                  e -> {
-                    log.warn(
-                        "Failed to unload namespace {} bundle {} to broker {}: {}",
-                        namespace,
-                        bundle,
-                        broker,
-                        e.getMessage());
-                    return false;
-                  }));
+      try {
+        admin.namespaces().unloadNamespaceBundle(namespace.toString(), bundle, broker);
+        log.info("Unloaded namespace {} bundle {} to broker {}", namespace, bundle, broker);
+      } catch (Exception e) {
+        log.warn(
+            "Failed to unload namespace {} bundle {} to broker {}: {}",
+            namespace,
+            bundle,
+            broker,
+            e.getMessage());
+      }
     }
-
-    FutureUtil.waitForAll(futures).get(30, TimeUnit.SECONDS);
     return 0;
   }
 }
