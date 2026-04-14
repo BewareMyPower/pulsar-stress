@@ -87,6 +87,15 @@ public class App implements Callable<Integer> {
     return Arrays.stream(namespaces.split(",")).map(NamespaceName::get).toList();
   }
 
+  public List<TopicName> getExpandedTopicNames(String baseTopicName) {
+    return getNamespaces().stream()
+        .flatMap(
+            nsName ->
+                expandNames(baseTopicName).stream()
+                    .map(topic -> TopicName.get(TopicDomain.persistent.toString(), nsName, topic)))
+        .toList();
+  }
+
   private List<String> expandNames(String baseName) {
     if (ranges == null || ranges.isEmpty()) {
       return List.of(baseName);

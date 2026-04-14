@@ -30,7 +30,11 @@ import picocli.CommandLine.Option;
       CreateTopicCommand.class,
       DeleteTopicCommand.class,
       LookupTopicCommand.class,
-      UnloadNamespaceCommand.class
+      UnloadNamespaceCommand.class,
+      SetTopicMessageTtlCommand.class,
+      GetTopicMessageTtlCommand.class,
+      SetTopicMessageTtlLatencyCommand.class,
+      GetTopicMessageTtlLatencyCommand.class
     })
 public class AdminCommand implements Callable<Integer> {
 
